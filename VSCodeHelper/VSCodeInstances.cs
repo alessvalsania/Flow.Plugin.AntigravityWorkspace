@@ -69,10 +69,14 @@ namespace Flow.Plugin.VSCodeWorkspaces.VSCodeHelper
             Instances = new List<VSCodeInstance>();
 
             _systemPath = Environment.GetEnvironmentVariable("PATH") ?? "";
-            var paths = _systemPath.Split(";").Where(x =>
+            var antigravityPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Programs", "Antigravity");
+            var paths = _systemPath.Split(";")
+                .Concat(new[] { antigravityPath })
+                .Where(x =>
                 x.Contains("VS Code", StringComparison.OrdinalIgnoreCase) ||
                 x.Contains("codium", StringComparison.OrdinalIgnoreCase) ||
-                x.Contains("vscode", StringComparison.OrdinalIgnoreCase));
+                x.Contains("vscode", StringComparison.OrdinalIgnoreCase) ||
+                x.Contains("antigravity", StringComparison.OrdinalIgnoreCase));
             foreach (var path in paths)
             {
                 if (!Directory.Exists(path))
@@ -80,17 +84,24 @@ namespace Flow.Plugin.VSCodeWorkspaces.VSCodeHelper
 
                 var newPath = path;
                 if (!Path.GetFileName(path).Equals("bin", StringComparison.OrdinalIgnoreCase))
-                    newPath = Path.Combine(path, "bin");
+                {
+                    var binPath = Path.Combine(path, "bin");
+                    if (Directory.Exists(binPath))
+                        newPath = binPath;
+                }
 
                 if (!Directory.Exists(newPath))
                     continue;
 
                 var files = Directory.EnumerateFiles(newPath).Where(x =>
                     (x.Contains("code", StringComparison.OrdinalIgnoreCase) ||
-                     x.Contains("codium", StringComparison.OrdinalIgnoreCase))
+                     x.Contains("codium", StringComparison.OrdinalIgnoreCase) ||
+                     x.Contains("antigravity", StringComparison.OrdinalIgnoreCase))
                     && !x.EndsWith(".cmd", StringComparison.OrdinalIgnoreCase)).ToArray();
 
-                var iconPath = Path.GetDirectoryName(newPath);
+                var iconPath = Path.GetFileName(newPath).Equals("bin", StringComparison.OrdinalIgnoreCase)
+                    ? Path.GetDirectoryName(newPath)
+                    : newPath;
 
                 if (files.Length <= 0)
                     continue;
@@ -122,6 +133,11 @@ namespace Flow.Plugin.VSCodeWorkspaces.VSCodeHelper
                 {
                     version = "VSCodium";
                     instance.VSCodeVersion = VSCodeVersion.Stable;
+                }
+                else if (file.EndsWith("antigravity") || file.EndsWith("antigravity.exe"))
+                {
+                    version = "Antigravity";
+                    instance.VSCodeVersion = VSCodeVersion.Antigravity;
                 }
 
                 if (version == string.Empty)
